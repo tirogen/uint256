@@ -307,6 +307,35 @@ func TestNewOp(t *testing.T) {
 	if a.Uint64() != 20 {
 		t.Fatalf("Sqrt1 failed")
 	}
+
+	a = NewInt(400)
+	c := NewInt(3)
+	if a.Mul3(b, c).Uint64() != 240000 {
+		t.Fatalf("Mul3 failed")
+	}
+	if a.Uint64() != 240000 {
+		t.Fatalf("Mul3 failed")
+	}
+	if b.Uint64() != 200 {
+		t.Fatalf("Mul3 failed")
+	}
+	if c.Uint64() != 3 {
+		t.Fatalf("Mul3 failed")
+	}
+
+	a = NewInt(400)
+	if NewMul3(a, b, c).Uint64() != 240000 {
+		t.Fatalf("NewMul3 failed")
+	}
+	if a.Uint64() != 400 {
+		t.Fatalf("NewMul3 failed")
+	}
+	if b.Uint64() != 200 {
+		t.Fatalf("NewMul3 failed")
+	}
+	if c.Uint64() != 3 {
+		t.Fatalf("NewMul3 failed")
+	}
 }
 
 func TestRandomBinOp(t *testing.T) {

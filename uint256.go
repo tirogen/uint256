@@ -436,6 +436,15 @@ func (x *Int) Mul1(y *Int) *Int {
 	return x.Set(&res)
 }
 
+func (z *Int) Mul3(x, y *Int) *Int {
+	return z.Mul1(new(Int).Mul(x, y))
+}
+
+func NewMul3(x, y, z *Int) *Int {
+	res := new(Int).Mul(x, y)
+	return res.Mul1(z)
+}
+
 // MulOverflow sets z to the product x*y, and returns z and  whether overflow occurred
 func (z *Int) MulOverflow(x, y *Int) (*Int, bool) {
 	p := umul(x, y)
