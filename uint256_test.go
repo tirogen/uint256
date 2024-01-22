@@ -253,6 +253,62 @@ func TestRandomSubOverflow(t *testing.T) {
 	}
 }
 
+func TestNewOp(t *testing.T) {
+	a := NewInt(400)
+	b := NewInt(200)
+
+	if a.Add1(b).Uint64() != 600 {
+		t.Fatalf("Add1 failed")
+	}
+	if a.Uint64() != 600 {
+		t.Fatalf("Add1 failed")
+	}
+	if b.Uint64() != 200 {
+		t.Fatalf("Add1 failed")
+	}
+
+	a = NewInt(400)
+	if a.Sub1(b).Uint64() != 200 {
+		t.Fatalf("Sub1 failed")
+	}
+	if a.Uint64() != 200 {
+		t.Fatalf("Sub1 failed")
+	}
+	if b.Uint64() != 200 {
+		t.Fatalf("Sub1 failed")
+	}
+
+	a = NewInt(400)
+	if a.Mul1(b).Uint64() != 80000 {
+		t.Fatalf("Mul1 failed")
+	}
+	if a.Uint64() != 80000 {
+		t.Fatalf("Mul1 failed")
+	}
+	if b.Uint64() != 200 {
+		t.Fatalf("Mul1 failed")
+	}
+
+	a = NewInt(400)
+	if a.Div1(b).Uint64() != 2 {
+		t.Fatalf("Div1 failed")
+	}
+	if a.Uint64() != 2 {
+		t.Fatalf("Div1 failed")
+	}
+	if b.Uint64() != 200 {
+		t.Fatalf("Div1 failed")
+	}
+
+	a = NewInt(400)
+	if a.Sqrt1().Uint64() != 20 {
+		t.Fatalf("Sqrt1 failed")
+	}
+	if a.Uint64() != 20 {
+		t.Fatalf("Sqrt1 failed")
+	}
+}
+
 func TestRandomBinOp(t *testing.T) {
 	t.Run("Add", func(t *testing.T) { testRandomOp(t, (*Int).Add, (*big.Int).Add) })
 	t.Run("Sub", func(t *testing.T) { testRandomOp(t, (*Int).Sub, (*big.Int).Sub) })

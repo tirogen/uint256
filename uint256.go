@@ -183,6 +183,15 @@ func (z *Int) Add(x, y *Int) *Int {
 	return z
 }
 
+func (x *Int) Add1(y *Int) *Int {
+	var carry uint64
+	x[0], carry = bits.Add64(x[0], y[0], 0)
+	x[1], carry = bits.Add64(x[1], y[1], carry)
+	x[2], carry = bits.Add64(x[2], y[2], carry)
+	x[3], _ = bits.Add64(x[3], y[3], carry)
+	return x
+}
+
 // AddOverflow sets z to the sum x+y, and returns z and whether overflow occurred
 func (z *Int) AddOverflow(x, y *Int) (*Int, bool) {
 	var carry uint64
@@ -320,6 +329,15 @@ func (z *Int) Sub(x, y *Int) *Int {
 	return z
 }
 
+func (x *Int) Sub1(y *Int) *Int {
+	var carry uint64
+	x[0], carry = bits.Sub64(x[0], y[0], 0)
+	x[1], carry = bits.Sub64(x[1], y[1], carry)
+	x[2], carry = bits.Sub64(x[2], y[2], carry)
+	x[3], _ = bits.Sub64(x[3], y[3], carry)
+	return x
+}
+
 // umulStep computes (hi * 2^64 + lo) = z + (x * y) + carry.
 func umulStep(z, x, y, carry uint64) (hi, lo uint64) {
 	hi, lo = bits.Mul64(x, y)
@@ -392,6 +410,30 @@ func (z *Int) Mul(x, y *Int) *Int {
 	res[3] = res3 + x[0]*y[3]
 
 	return z.Set(&res)
+}
+
+func (x *Int) Mul1(y *Int) *Int {
+	var (
+		res              Int
+		carry            uint64
+		res1, res2, res3 uint64
+	)
+
+	carry, res[0] = bits.Mul64(x[0], y[0])
+	carry, res1 = umulHop(carry, x[1], y[0])
+	carry, res2 = umulHop(carry, x[2], y[0])
+	res3 = x[3]*y[0] + carry
+
+	carry, res[1] = umulHop(res1, x[0], y[1])
+	carry, res2 = umulStep(res2, x[1], y[1], carry)
+	res3 = res3 + x[2]*y[1] + carry
+
+	carry, res[2] = umulHop(res2, x[0], y[2])
+	res3 = res3 + x[1]*y[2] + carry
+
+	res[3] = res3 + x[0]*y[3]
+
+	return x.Set(&res)
 }
 
 // MulOverflow sets z to the product x*y, and returns z and  whether overflow occurred
@@ -583,6 +625,26 @@ func (z *Int) Div(x, y *Int) *Int {
 	var quot Int
 	udivrem(quot[:], x[:], y)
 	return z.Set(&quot)
+}
+
+func (x *Int) Div1(y *Int) *Int {
+	if y.IsZero() || y.Gt(x) {
+		return x.Clear()
+	}
+	if x.Eq(y) {
+		return x.SetOne()
+	}
+	// Shortcut some cases
+	if x.IsUint64() {
+		return x.SetUint64(x.Uint64() / y.Uint64())
+	}
+
+	// At this point, we know
+	// x/y ; x > y > 0
+
+	var quot Int
+	udivrem(quot[:], x[:], y)
+	return x.Set(&quot)
 }
 
 // Mod sets z to the modulus x%y for y != 0 and returns z.
@@ -1332,6 +1394,39 @@ func (z *Int) Sqrt(x *Int) *Int {
 		if z2.Cmp(z1) >= 0 {
 			// z1 is answer.
 			return z.Set(z1)
+		}
+		z1, z2 = z2, z1
+	}
+}
+
+func (x *Int) Sqrt1() *Int {
+	// This implementation of Sqrt is based on big.Int (see math/big/nat.go).
+	if x.LtUint64(2) {
+		return x
+	}
+	var (
+		z1 = &Int{1, 0, 0, 0}
+		z2 = &Int{}
+	)
+	// Start with value known to be too large and repeat "z = ⌊(z + ⌊x/z⌋)/2⌋" until it stops getting smaller.
+	z1 = z1.Lsh(z1, uint(x.BitLen()+1)/2) // must be ≥ √x
+	for {
+		z2 = z2.Div(x, z1)
+		z2 = z2.Add(z2, z1)
+		{ //z2 = z2.Rsh(z2, 1) -- the code below does a 1-bit rsh faster
+			a := z2[3] << 63
+			z2[3] = z2[3] >> 1
+			b := z2[2] << 63
+			z2[2] = (z2[2] >> 1) | a
+			a = z2[1] << 63
+			z2[1] = (z2[1] >> 1) | b
+			z2[0] = (z2[0] >> 1) | a
+		}
+		// end of inlined bitshift
+
+		if z2.Cmp(z1) >= 0 {
+			// z1 is answer.
+			return x.Set(z1)
 		}
 		z1, z2 = z2, z1
 	}
